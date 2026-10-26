@@ -1,7 +1,7 @@
 CLUSTER_NAME := voting-cluster
 NAMESPACE := voting-app
 
-.PHONY: doctor cluster-up cluster-down deploy wait-ready verify
+.PHONY: doctor cluster-up cluster-down deploy wait-ready verify incident-image recover-image incident-service recover-service
 
 doctor:
 	@command -v docker >/dev/null 2>&1 || { echo >&2 "Docker mancante."; exit 1; }
@@ -23,3 +23,15 @@ wait-ready:
 
 verify:
 	kubectl get pods,svc,endpoints -n $(NAMESPACE)
+
+incident-image:
+	kubectl apply -k k8s/overlays/incident-image
+
+recover-image:
+	kubectl apply -k k8s/overlays/local
+
+incident-service:
+	kubectl apply -k k8s/overlays/incident-service
+
+recover-service:
+	kubectl apply -k k8s/overlays/local
