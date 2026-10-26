@@ -5,6 +5,7 @@ namespace: voting-app
 
 resources:
   - ../../base
+  - namespace.yaml
 
 secretGenerator:
   - name: db-credentials
