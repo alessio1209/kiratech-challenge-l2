@@ -1,0 +1,30 @@
+name: CI - Kustomize Validation
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  validate-manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del codice
+        uses: actions/checkout@v4
+
+      - name: Installa Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Valida Base (Upstream)
+        run: kustomize build k8s/base > /dev/null
+
+      - name: Valida Overlay Locale
+        run: kustomize build k8s/overlays/local > /dev/null
+
+      - name: Valida Overlay Incidenti
+        run: |
+          kustomize build k8s/overlays/incident-image > /dev/null
+          kustomize build k8s/overlays/incident-service > /dev/null
