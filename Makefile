@@ -1,5 +1,5 @@
 CLUSTER_NAME := voting-cluster
-NAMESPACE := challenge-l2
+NAMESPACE := voting-app
 
 .PHONY: doctor cluster-up cluster-down deploy wait-ready verify
 
