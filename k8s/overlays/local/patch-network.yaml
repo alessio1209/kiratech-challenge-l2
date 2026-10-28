@@ -5,6 +5,8 @@ metadata:
 spec:
   type: NodePort
   ports:
+  - $patch: delete
+    port: 8080
   - name: "80"
     port: 80
     targetPort: 80
@@ -17,6 +19,8 @@ metadata:
 spec:
   type: NodePort
   ports:
+  - $patch: delete
+    port: 8081
   - name: "80"
     port: 80
     targetPort: 80
