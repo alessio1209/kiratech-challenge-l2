@@ -22,7 +22,9 @@ jobs:
         run: kustomize build k8s/base > /dev/null
 
       - name: Valida Overlay Locale
-        run: kustomize build k8s/overlays/local > /dev/null
+        run: |
+          cp k8s/overlays/local/.env.example k8s/overlays/local/.env
+          kustomize build k8s/overlays/local > /dev/null
 
       - name: Valida Overlay Incidenti
         run: |
