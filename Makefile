@@ -1,7 +1,7 @@
 CLUSTER_NAME := voting-cluster
 NAMESPACE := voting-app
 
-.PHONY: doctor cluster-up cluster-down deploy wait-ready verify incident-image recover-image incident-service recover-service
+.PHONY: doctor cluster-up cluster-down deploy wait-ready verify incident-image recover-image incident-service recover-service scale-up scale-down
 
 doctor:
 	@command -v docker >/dev/null 2>&1 || { echo >&2 "Docker mancante."; exit 1; }
@@ -35,3 +35,11 @@ incident-service:
 
 recover-service:
 	kubectl apply -k k8s/overlays/local
+
+scale-up:
+	kubectl scale deployment vote --replicas=3 -n $(NAMESPACE)
+	kubectl get pods -n $(NAMESPACE) -l app=vote -w
+
+scale-down:
+	kubectl scale deployment vote --replicas=1 -n $(NAMESPACE)
+	kubectl get pods -n $(NAMESPACE) -l app=vote
