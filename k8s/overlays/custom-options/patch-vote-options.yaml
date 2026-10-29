@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote
+spec:
+  template:
+    spec:
+      containers:
+      - name: vote
+        env:
+        - name: OPTION_A
+          valueFrom:
+            configMapKeyRef:
+              name: vote-options
+              key: OPTION_A
+        - name: OPTION_B
+          valueFrom:
+            configMapKeyRef:
+              name: vote-options
+              key: OPTION_B
