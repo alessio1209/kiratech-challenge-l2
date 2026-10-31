@@ -1,20 +1,42 @@
-# Utilizzo dell'Intelligenza Artificiale (Generative AI)
+# Utilizzo dell'AI
 
-La Generative AI (LLM) è stata utilizzata come "Pair Programmer" e assistente al troubleshooting, mantenendo il pieno controllo critico sull'architettura e sulle scelte ingegneristiche finali.
+Ho usato un assistente AI (LLM) come supporto per capire gli strumenti, per le ipotesi di troubleshooting e per bozze di automazione e documentazione. Le scelte tecniche e la responsabilità di ciò che è consegnato sono mie: ogni modifica è stata verificata sul mio cluster.
 
-Di seguito i casi d'uso reali affrontati durante lo sviluppo:
+## Regole che mi sono dato
 
-## Caso 1: Risoluzione del bug di Kustomize sulle liste (Troubleshooting L2)
-- **Il Problema:** La patch YAML standard usata per iniettare il `valueFrom` nel container `postgres` falliva. Kustomize non sovrascriveva il `value` in chiaro originale, unendo i due campi e causando un errore API.
-- **Supporto AI:** L'AI ha identificato che lo *Strategic Merge Patch* di Kustomize ha limiti noti nella sovrascrittura di array di oggetti (come la lista `env`) e ha suggerito di aggirare il problema iniettando una **JSON Patch inline** (`op: replace`) nel file `kustomization.yaml`.
-- **Verifica e Limiti Critici:** Ho testato la soluzione validando il live-state. La tecnica era corretta, tuttavia, l'AI consigliava inizialmente di generare una password completamente nuova. Ho dovuto ignorare il consiglio applicando il giudizio critico: cambiando la password, l'immagine `worker` upstream (che ha la password `postgres` hardcodata) non si sarebbe più connessa. L'AI mancava del contesto applicativo globale.
+- Nessun secret o dato sensibile nei prompt.
+- Nessun comando eseguito senza averlo capito.
+- Distinguere ciò che l'AI ha suggerito da ciò che ho verificato io (ogni caso sotto riporta entrambe le cose).
+- Riportare anche i suggerimenti che si sono rivelati sbagliati o incompleti.
 
-## Caso 2: Automazione Disaster Recovery (Shell Scripting / Make)
-- **Il Problema:** Necessità di creare un sistema ripetibile per scatenare gli incidenti e dimostrare i successivi rollback durante il colloquio.
-- **Supporto AI:** Ho chiesto all'AI di abbozzare i target del `Makefile` per l'applicazione degli overlay di fault (es. `make incident-image`).
-- **Verifica:** I comandi erano corretti e idempotenti. Li ho verificati simulando l'incidente dal vivo, osservando i transitori e confermando il corretto ripristino dell'endpoint dopo il comando di recover.
+## Caso 1 - Sostituire le variabili del database con un riferimento al Secret (troubleshooting)
 
-## Caso 3: Gestione dell'Hash nei ConfigMap (Troubleshooting App)
-- **Il Problema:** Durante la stesura dell'overlay `custom-options` per variare il frontend, il nuovo pod andava in `CreateContainerConfigError`.
-- **Supporto AI:** Analizzando i log e l'output di `get cm`, l'AI mi ha guidato a comprendere che Kustomize genera di default un hash casuale come suffisso nel nome del ConfigMap (es. `vote-options-66hbtb5hg7`). La patch applicata al deployment cercava invece il nome esatto.
-- **Soluzione:** È stata applicata la direttiva `disableNameSuffixHash: true` nel `kustomization.yaml` per garantire la corretta associazione tra il Deployment patchato e il ConfigMap generato, risolvendo il blocco e completando il Rolling Update.
+- **Problema:** volevo togliere `POSTGRES_USER` e `POSTGRES_PASSWORD` in chiaro dal Deployment `db` e usare un Secret. La patch YAML con `$patch: replace` sulla lista `env` non produceva l'effetto voluto: nel render di `kustomize build k8s/overlays/local` il Deployment conservava ancora i valori in chiaro.
+- **Supporto AI:** ho chiesto di spiegare il comportamento. L'AI ha indicato che lo strategic merge patch di Kustomize tratta in modo particolare le liste di oggetti e ha suggerito una **JSON Patch inline** (`op: replace` su `/spec/template/spec/containers/0/env`) nel `kustomization.yaml`.
+- **Verifica:** ho riscritto la patch e ho controllato il risultato con `kustomize build` (le variabili ora usano `secretKeyRef`) e poi con un deploy sul cluster.
+- **Limite del suggerimento:** l'AI proponeva anche di generare una password nuova. Non l'ho fatto: le immagini upstream di `worker` e `result` hanno la password `postgres` scritta nel codice e non si sarebbero più connesse al database. L'AI non conosceva il comportamento di queste immagini.
+
+## Caso 2 - Target `make` per incidenti e ripristino
+
+- **Problema:** serviva un modo ripetibile per provocare un guasto e tornare alla normalità.
+- **Supporto AI:** ho chiesto una bozza dei target `make` per applicare gli overlay di guasto (`make incident-image`, `make incident-service`) e per il ripristino, preferendo overlay Kustomize a modifiche dei file con `sed`.
+- **Verifica:** ho simulato gli incidenti dal vivo sul cluster, osservato i transitori e controllato con `kubectl get pods` e `get endpoints` che il ripristino riportasse lo stato sano.
+- **Cosa ho imparato osservando:** con il rolling update il vecchio Pod del `worker` è rimasto attivo durante l'incidente 1, quindi l'effetto reale è un rilascio bloccato, non un'applicazione ferma. Nel runbook riporto ciò che ho osservato.
+
+## Caso 3 - Errore `CreateContainerConfigError` sull'overlay `custom-options`
+
+- **Problema:** Durante la stesura dell'overlay `custom-options`, il nuovo Pod `vote` è andato in `CreateContainerConfigError`.
+- **Supporto AI:** L'AI ha ipotizzato che Kustomize stesse aggiungendo un hash al nome del ConfigMap (es. `vote-options-66hbtb5hg7`) e che la patch fallisse perché cercava il nome esatto `vote-options`. Mi ha suggerito di aggiungere `disableNameSuffixHash: true` per aggirare il presunto problema.
+- **Verifica:** Non convinto del suggerimento, ho testato Kustomize rimuovendo la direttiva `disableNameSuffixHash: true` dal file YAML. Eseguendo `make change-voting-options`, il pod si è avviato regolarmente, e l'output di `kubectl describe` ha mostrato che Kustomize è intelligente: riscrive automaticamente il riferimento `configMapKeyRef` nel deployment includendo il corretto suffisso alfanumerico (l'hash). 
+- **Esito e Causa Reale:** Ho confermato con un test live-state che l'ipotesi dell'AI (incolpare l'hash) era **errata**. Il vero motivo dell'errore (risolto precedentemente) era la mancanza della direttiva `namespace: voting-app` nel file `kustomization.yaml` dell'overlay: il ConfigMap veniva generato nel namespace di default e risultava semplicemente invisibile al Pod.
+
+## Cosa non ho delegato all'AI
+
+- La scelta dell'applicazione e del perimetro.
+- L'interpretazione degli output di `kubectl` nei due incidenti e le condizioni di escalation.
+- La decisione di mantenere le credenziali `postgres/postgres` per compatibilità con le immagini upstream.
+
+## Limiti dell'uso dell'AI
+
+- L'AI non conosceva il comportamento delle immagini upstream (credenziali nel codice) né il mio ambiente locale.
+- Ha formulato spiegazioni plausibili (come l'errore del ConfigMap) che vanno **sempre** verificate con prove empiriche su cluster prima di essere accettate.

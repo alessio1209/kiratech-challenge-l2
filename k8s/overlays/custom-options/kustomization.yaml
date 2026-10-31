@@ -12,8 +12,5 @@ configMapGenerator:
       - OPTION_A=Pizza
       - OPTION_B=Pasta
 
-generatorOptions:
-  disableNameSuffixHash: true
-
 patches:
   - path: patch-vote-options.yaml
