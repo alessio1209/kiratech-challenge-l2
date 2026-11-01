@@ -185,7 +185,7 @@ Passare a L3 / team piattaforma se:
 - il rollout non si completa entro un tempo concordato (ad esempio 10 minuti) nonostante il rollback.
 
 Informazioni da allegare al ticket:
-- output di `make evidence LABEL=incident-image` (stato dei Pod, eventi, Service/EndpointSlice, label e log);
+- output di `make evidence LABEL=incident-image` (stato dei Pod, eventi, Service/EndpointSlice, label e log) (esempio: `docs/evidence/diagnose-incident-image-20261101-150800.txt`);
 - immagine e tag richiesti, e ultimo tag funzionante;
 - ora di inizio dell'anomalia e ultimo deploy eseguito;
 - cosa è già stato provato (recover, rollout undo) e con quale esito.
@@ -276,7 +276,7 @@ Passare a L3 / team rete o piattaforma se:
 - il problema riguarda più Service contemporaneamente.
 
 Informazioni da allegare al ticket:
-- output di `kubectl describe svc result`, `get endpoints result` e `get pods --show-labels`;
+- dump generato da `make evidence LABEL=incident-service` (esempio: `docs/evidence/diagnose-incident-service-20261101-151000.txt`);
 - ora di inizio e ultima modifica applicata;
 - esito di `make smoke-test` e `make e2e-test`;
 - cosa è già stato provato.

@@ -21,7 +21,7 @@ Ambiente locale riproducibile e laboratorio di troubleshooting L2 per la **Docke
 | README (app, prerequisiti, architettura, installazione, verifica, demo, rimozione) | Questo file |
 | Manifest Kubernetes / Kustomize | `k8s/base`, `k8s/overlays/*` |
 | Runbook L2 | [docs/runbook.md](docs/runbook.md) |
-| Schema architetturale | [docs/architecture.md](docs/architecture.md) |
+| Schema architetturale | Sezione [Architettura](#architettura) |
 | Valutazione Krateo | [docs/krateo.md](docs/krateo.md) |
 | Uso dell'AI | [docs/ai_usage.md](docs/ai_usage.md) |
 | Plus: CI | `.github/workflows/ci.yml` |
@@ -89,7 +89,7 @@ k8s/overlays/custom-options/  demo di riconfigurazione (ConfigMap con le opzioni
 k8s/overlays/incident-image/  incidente 1: immagine inesistente
 k8s/overlays/incident-service/ incidente 2: selector del Service errato
 scripts/e2e-test.sh           invia un voto e verifica che arrivi nel database
-docs/                         runbook, Krateo, uso dell'AI, evidence/ (output di make evidence)
+docs/                         runbook, Krateo, uso dell'AI, evidence/
 Makefile                      automazione (vedere `make help`)
 ```
 
@@ -97,7 +97,7 @@ Makefile                      automazione (vedere `make help`)
 
 Docker (con daemon avviato), kind, kubectl, make.
 
-Versioni con cui è stato provato: Sistema Operativo: `Debian 12 (Linux)`, Docker: `27.3.1`, kind: `v0.25.0`, kubectl: `v1.31.2` (nodo kind v1.30.0, fissato in kind-config.yaml). Data dell'ultima prova completa: 1 novembre 2026.
+Versioni con cui è stato provato: Sistema Operativo: `Debian 12 (Linux)`, Docker: `27.3.1`, kind: `v0.25.0`, kubectl: `v1.31.2` (nodo kind `v1.30.0`, fissato in `kind-config.yaml`). Data dell'ultima prova completa: `1 novembre 2026`.
 
 ## Installazione
 
@@ -218,14 +218,14 @@ make reinstall      # elimina e ricrea il cluster, poi deploy e attesa
 - Le immagini upstream usano il tag `latest` (o simili): il comportamento può cambiare nel tempo.
 - Accesso tramite NodePort (nessun ingress), nessun RBAC dedicato, nessuna NetworkPolicy.
 - `make smoke-test` controlla solo che le pagine rispondano; il percorso del voto è verificato rigorosamente da `make e2e-test`.
+- **Esposizione delle porte:** i NodePort 30000 e 30001 sono pubblicati sull'host su tutte le interfacce (comportamento predefinito di kind). Per limitarli basta aggiungere `listenAddress: "127.0.0.1"` a ogni `extraPortMappings` all'interno del file `kind-config.yaml`.
 - **Service senza Endpoint:** se il selector non corrisponde a nessun Pod pronto (scenario 2), il Service non ha Endpoint e `kube-proxy` rifiuta le connessioni (`connection refused`): il sintomo è un errore immediato, non un timeout.
 - **Limiti codice upstream (ConfigMap):** Modificando le opzioni di voto tramite ConfigMap (`make change-voting-options`), l'app `vote` si aggiorna correttamente mostrando "Pizza vs Pasta". Tuttavia, la dashboard `result` continua a mostrare le etichette originali ("Cats vs Dogs") poiché tali stringhe sono hardcodate nativamente nel codice HTML/JS dell'immagine Docker upstream e non sono configurabili dinamicamente.
 - Non è una soluzione production-ready: è un ambiente locale di prova.
-- **Esposizione delle porte:** i NodePort 30000 e 30001 sono pubblicati sull'host su tutte le interfacce (comportamento predefinito di kind). Per limitarli basta aggiungere listenAddress: "127.0.0.1" a ogni extraPortMappings.
 
 ## CI
 
-`.github/workflows/ci.yml` esegue a ogni push e pull request: validazione dei manifest tramite `kubectl kustomize` coprendo tutti gli ambienti, inclusi i casi di fault injection per verificare che non vi siano errori sintattici nei YAML. La CI **non** crea un cluster: il test completo (`make e2e-test`) è eseguito solo in locale.
+`.github/workflows/ci.yml` esegue a ogni push e pull request un test di renderizzazione tramite `kustomize build` per verificare che non ci siano errori sintattici nei manifest. La CI **non** crea un cluster: il test e2e è eseguito solo in locale.
 
 ## Difficoltà incontrate
 
