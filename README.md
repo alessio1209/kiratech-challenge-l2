@@ -10,7 +10,7 @@ Ambiente locale riproducibile e laboratorio di troubleshooting L2 per la **Docke
 | Documento | Contenuto |
 |---|---|
 | [docs/runbook.md](docs/runbook.md) | Controlli iniziali, comandi diagnostici, due scenari di errore, rollback, escalation |
-| [docs/krateo.md](docs/krateo.md) | Valutazione concettuale di Krateo (Blueprint, moduli, limiti) |
+| [docs/krateo.md](docs/krateo.md) | Valutazione architetturale di Krateo (Blueprint, Provider, limiti) |
 | [docs/ai_usage.md](docs/ai_usage.md) | Uso dell'AI: casi d'uso, verifiche manuali, limiti |
 
 ## Tracciabilità dei deliverable
@@ -37,17 +37,19 @@ Online Boutique (suggerita dalla challenge) è composta da molti microservizi ed
 **Perimetro della demo:** tutti e 5 i componenti dell'app (vote, result, worker, redis, db). Nulla è stato escluso.
 
 ### Analisi dei Container e Immagini Utilizzate (Punto 4.2)
-Per garantire stabilità e riproducibilità, le immagini Docker sono state analizzate in base ai loro Dockerfile upstream:
+Le immagini sono quelle upstream; gli elementi principali sono ricavati dai loro Dockerfile e dal codice sorgente:
 
 | Componente | Immagine Docker upstream | Linguaggio | Porta Esposta | Variabili d'Ambiente Rilevanti |
 |---|---|---|---|---|
 | **Vote** | `dockersamples/examplevotingapp_vote:latest` | Python | TCP 80 | Nessuna di default (le variabili `OPTION_A` / `OPTION_B` vengono iniettate dinamicamente via ConfigMap nell'overlay `custom-options`) |
-| **Result** | `dockersamples/examplevotingapp_result:latest` | Node.js | TCP 80 | Nessuna (le stringhe "Cats/Dogs" sono hardcodate nell'HTML) |
-| **Worker** | `dockersamples/examplevotingapp_worker:latest` | .NET Core | N/A (nessun Service) | Nessuna |
+| **Result** | `dockersamples/examplevotingapp_result:latest` | Node.js | TCP 80 | `PORT=80` (impostata nel Dockerfile); le stringhe "Cats/Dogs" sono hardcodate nell'HTML |
+| **Worker** | `dockersamples/examplevotingapp_worker:latest` | .NET 7 | N/A (nessun Service) | Nessuna |
 | **Redis** | `redis:alpine` | C | TCP 6379 | Nessuna |
 | **DB** | `postgres:15-alpine` | C | TCP 5432 | `POSTGRES_USER`, `POSTGRES_PASSWORD` (Iniettate tramite Secret per evitare di esporle in chiaro nel manifest) |
 
-*(Nota tecnica: tutte le immagini derivanti dal progetto `dockersamples` sono compilate come multi-architettura, garantendo la compatibilità sia su `amd64` che su processori ARM come l'Apple Silicon).*
+I nomi host `redis` e `db` e le credenziali `postgres/postgres` sono scritti nel codice di `vote`, `result` e `worker`: per questo i Service si chiamano esattamente `redis` e `db`.
+
+*(Nota: il workflow di build upstream pubblica le immagini per `linux/amd64`, `linux/arm64` e `linux/arm/v7`, quindi sono utilizzabili anche su Apple Silicon).*
 
 ## Architettura
 
@@ -76,7 +78,7 @@ Flusso: l'utente vota su `vote`, il voto va in una coda Redis, il `worker` lo le
 | redis | Deployment, `emptyDir` | ClusterIP 6379 | solo interno |
 | db | Deployment, `emptyDir`, Secret | ClusterIP 5432 | solo interno |
 
-Tutto gira nel namespace `voting-app`. Le porte 30000 e 30001 dell'host sono mappate sul nodo kind in `kind-config.yaml` legandole strettamente all'interfaccia di loopback (`127.0.0.1`) per sicurezza, per evitare che i servizi siano esposti all'intera rete locale.
+Tutto gira nel namespace `voting-app`. Le porte 30000 e 30001 dell'host sono mappate sul nodo kind in `kind-config.yaml`.
 
 ## Struttura del repository
 
@@ -87,7 +89,7 @@ k8s/overlays/custom-options/  demo di riconfigurazione (ConfigMap con le opzioni
 k8s/overlays/incident-image/  incidente 1: immagine inesistente
 k8s/overlays/incident-service/ incidente 2: selector del Service errato
 scripts/e2e-test.sh           invia un voto e verifica che arrivi nel database
-docs/                         runbook, Krateo, uso dell'AI
+docs/                         runbook, Krateo, uso dell'AI, evidence/ (output di make evidence)
 Makefile                      automazione (vedere `make help`)
 ```
 
@@ -125,13 +127,13 @@ Risultato atteso:
 
 Accesso dal browser: `http://localhost:30000` (voto) e `http://localhost:30001` (risultati).
 
-Comandi utili per l'analisi: `make events`, `make logs APP=worker`.
+Comandi utili per l'analisi: `make events`, `make logs APP=worker`, `make diagnose` e `make evidence LABEL=<nome>`.
 
 ## Demo e Riconfigurazione (Punto 7)
 
-Questa sezione funge da traccia per la dimostrazione live durante il colloquio, mettendo a confronto l'approccio dichiarativo (GitOps) e quello imperativo (emergenza).
+Questa sezione funge da traccia per la dimostrazione live durante il colloquio, mettendo a confronto l'approccio dichiarativo (configurazione in Git applicata con Kustomize) e quello imperativo (emergenza).
 
-### 1. Approccio Dichiarativo: Iniezione ConfigMap (GitOps)
+### 1. Approccio Dichiarativo: Iniezione ConfigMap (Kustomize)
 Modifica dinamicamente le opzioni di voto (da Cats/Dogs a Pizza/Pasta) tramite l'overlay `custom-options`, generando un ConfigMap con hash e triggerando un Rolling Update a zero disservizio.
 
 **Azione:**
@@ -216,7 +218,7 @@ make reinstall      # elimina e ricrea il cluster, poi deploy e attesa
 - Le immagini upstream usano il tag `latest` (o simili): il comportamento può cambiare nel tempo.
 - Accesso tramite NodePort (nessun ingress), nessun RBAC dedicato, nessuna NetworkPolicy.
 - `make smoke-test` controlla solo che le pagine rispondano; il percorso del voto è verificato rigorosamente da `make e2e-test`.
-- **Service senza Endpoint (Traffico Droppato):** Se un Service perde i suoi Endpoint (come simulato nello scenario 2), in assenza di proxy complessi, il componente `kube-proxy` droppa le richieste TCP rifiutando la connessione in entrata.
+- **Service senza Endpoint:** se il selector non corrisponde a nessun Pod pronto (scenario 2), il Service non ha Endpoint e `kube-proxy` rifiuta le connessioni (`connection refused`): il sintomo è un errore immediato, non un timeout.
 - **Limiti codice upstream (ConfigMap):** Modificando le opzioni di voto tramite ConfigMap (`make change-voting-options`), l'app `vote` si aggiorna correttamente mostrando "Pizza vs Pasta". Tuttavia, la dashboard `result` continua a mostrare le etichette originali ("Cats vs Dogs") poiché tali stringhe sono hardcodate nativamente nel codice HTML/JS dell'immagine Docker upstream e non sono configurabili dinamicamente.
 - Non è una soluzione production-ready: è un ambiente locale di prova.
 

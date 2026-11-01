@@ -30,20 +30,13 @@ Ho usato un assistente AI (LLM) come supporto per capire gli strumenti, per le i
 - **Verifica:** Non convinto del suggerimento, ho testato Kustomize rimuovendo la direttiva `disableNameSuffixHash: true` dal file YAML. Eseguendo `make change-voting-options`, il pod si è avviato regolarmente, e l'output di `kubectl describe` ha mostrato che Kustomize è intelligente: riscrive automaticamente il riferimento `configMapKeyRef` nel deployment includendo il corretto suffisso alfanumerico (l'hash). 
 - **Esito e Causa Reale:** Ho confermato con un test live-state che l'ipotesi dell'AI (incolpare l'hash) era **errata**. Il vero motivo dell'errore (risolto precedentemente) era la mancanza della direttiva `namespace: voting-app` nel file `kustomization.yaml` dell'overlay: il ConfigMap veniva generato nel namespace di default e risultava semplicemente invisibile al Pod.
 
-## Caso 4 - Interpretazione degli Output degli Incidenti
-
-- **Problema:** Nella stesura del Runbook, avevo bisogno di identificare e formattare i log fisici corretti per documentare un'immagine inesistente.
-- **Supporto AI:** L'AI, partendo da log storici di altre sessioni, aveva assemblato un finto output "verosimile" mescolando comandi eseguiti in momenti diversi.
-- **Verifica:** Analizzando i timestamp (`3h30m` vs `17s`) mi sono reso conto dell'errore. Ho rieseguito la clean-run manualmente e ho forzato l'AI a incorporare i *veri* output ricavati da un `describe pod -l app=worker` e da `make events` eseguiti contestualmente all'incidente.
-- **Esito e Causa Reale:** Ho confermato che non si può delegare ciecamente la stesura di log o output di debug all'AI, in quanto questa tende a prediligere una narrativa coerente ma non necessariamente allineata allo stato *live* dell'infrastruttura locale.
-
 ## Cosa non ho delegato all'AI
 
 - La scelta dell'applicazione e del perimetro.
-- L'interpretazione autonoma degli output di `kubectl` nei due incidenti e le condizioni finali di escalation.
+- L'interpretazione degli output di `kubectl` nei due incidenti e le condizioni di escalation.
 - La decisione di mantenere le credenziali `postgres/postgres` per compatibilità tecnica con le immagini upstream.
 
 ## Limiti dell'uso dell'AI
 
 - L'AI non conosceva preventivamente il comportamento "hardcoded" delle immagini upstream (es. credenziali di database forzate nel codice compilato).
-- Formula costantemente spiegazioni plausibili (come l'errore del ConfigMap o la ricostruzione cronologica dei log) che vanno **sempre e rigorosamente** verificate con prove empiriche sul terminale prima di poterne certificare la validità.
+- Formula costantemente spiegazioni plausibili (come l'errore del ConfigMap) che vanno **sempre e rigorosamente** verificate con prove empiriche sul terminale prima di poterne certificare la validità.

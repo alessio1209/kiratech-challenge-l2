@@ -1,21 +1,21 @@
 # Integrazione con Krateo PlatformOps (Concettuale)
 
-Questo documento illustra l'approccio teorico per trasformare l'attuale infrastruttura GitOps in un template *Self-Service* utilizzabile tramite **Krateo PlatformOps**. 
+Questo documento illustra l'approccio teorico per trasformare l'attuale configurazione dichiarativa (Kustomize) in un template *Self-Service* utilizzabile tramite **Krateo PlatformOps**. 
 *Nota: L'implementazione pratica non è stata eseguita, l'analisi è puramente concettuale.*
 
 ## 1. Cosa diventerebbe Template
-L'intera directory `k8s/base` e i concetti applicati nell'overlay `local` verrebbero pacchettizzati in un modulo (tramite **Blueprint** e **Core-Provider**). Krateo esporrebbe un'interfaccia grafica per richiedere l'ambiente. In questo modo, Krateo genera e riconcilia dinamicamente i CRD (Custom Resource Definition) necessari a far nascere l'infrastruttura.
+L'intera directory `k8s/base` e i concetti applicati nell'overlay `local` verrebbero pacchettizzati in un modulo (tramite **Blueprint** e **Core-Provider**). Krateo esporrebbe un'interfaccia grafica per richiedere l'ambiente. In questo modo, Krateo genera e riconcilia dinamicamente i CRD (Custom Resource Definition) necessari a far nascere l'infrastruttura. Krateo parte da chart Helm: la configurazione Kustomize andrebbe quindi tradotta in un chart, con i parametri esposti come `values` e descritti da uno schema (`values.schema.json`).
 
 ## 2. Parametri (Input) richiesti all'utente
 Il form Self-Service sul portale Krateo chiederebbe allo sviluppatore solo parametri di alto livello, astraendo la complessità di Kubernetes:
 - **Nome Applicazione:** (es. `voting-app-demo`)
 - **Namespace di destinazione:** (es. `team-frontend-dev`)
-- **Ambiente:** Dropdown (`Sviluppo`, `Staging`, `Produzione`). *Selezionando "Sviluppo" si applicherebbero limiti di risorse rigorosi tramite Mutating Webhooks; selezionando "Produzione" si scalerebbero dinamicamente le repliche del frontend.*
+- **Ambiente:** Dropdown (`Sviluppo`, `Staging`, `Produzione`). *Selezionando "Sviluppo" il template applicherebbe limiti di risorse contenuti; selezionando "Produzione" aumenterebbe le repliche di `vote` e `result`.*
 - **Tag Immagine Worker:** (es. `latest` o un hash/digest specifico, gestito e validato a monte)
 
 ## 3. Benefici dell'approccio Krateo
 - **Democratizzazione (Self-Service):** Gli sviluppatori accendono ambienti in autonomia senza necessitare della conoscenza approfondita di Kustomize, Helm, Terraform o le JSON Patch.
-- **Sicurezza By-Design:** Krateo gestirebbe l'integrazione architetturale con un secret manager (es. HashiCorp Vault o External Secrets Operator) in modo nativo, abbattendo il rischio di esporre dati sensibili ed evitando la distribuzione fisica di file `.env`.
+- **Sicurezza By-Design:** Krateo gestirebbe l'integrazione architetturale con un secret manager (es. HashiCorp Vault o External Secrets Operator) come integrazione possibile da valutare (non inclusa in questo progetto), così che le credenziali non transitino da file `.env` locali.
 - **Standardizzazione (Guardrails):** Imposizione di policy aziendali rigide e centralizzate stabilite dal Platform Team (es. obbligo di Liveness/Readiness probes o impossibilità di bypassare limiti prestabiliti).
 
 ## 4. Limiti, Sfide e Considerazioni Pratiche

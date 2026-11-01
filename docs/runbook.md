@@ -78,7 +78,7 @@ Il Pod originale (`worker-5dd767667f-x75jz`) resta `Running`, mentre quello del 
 kubectl --context kind-voting-cluster describe pod -l app=worker -n voting-app
 ```
 
-Evidenza (ispezione fisica dello stato del container incriminato all'interno del pod bloccato):
+Evidenza (stato del container nel Pod bloccato):
 ```text
 Containers:
   worker:
@@ -185,7 +185,7 @@ Passare a L3 / team piattaforma se:
 - il rollout non si completa entro un tempo concordato (ad esempio 10 minuti) nonostante il rollback.
 
 Informazioni da allegare al ticket:
-- output generato da `make evidence LABEL=incident-image` contenente tutti i log fisici;
+- output di `make evidence LABEL=incident-image` (stato dei Pod, eventi, Service/EndpointSlice, label e log);
 - immagine e tag richiesti, e ultimo tag funzionante;
 - ora di inizio dell'anomalia e ultimo deploy eseguito;
 - cosa è già stato provato (recover, rollout undo) e con quale esito.
@@ -239,7 +239,7 @@ Nota: nelle versioni recenti di kubectl `get endpoints` può mostrare un avviso 
 ### 3. Ipotesi e causa confermata
 
 - **Ipotesi:** il Service non seleziona i Pod per una differenza tra il suo `selector` e le label dei Pod.
-- **Verifica:** il selector del Service è `app=app-sbagliata`, il Pod `result` ha `app=result`; nessun Pod corrisponde, quindi la lista degli endpoint è vuota. I Pod sono sani: il traffico arriva al nodo ma viene droppato a livello TCP da `kube-proxy`.
+- **Verifica:** il selector del Service è `app=app-sbagliata`, il Pod `result` ha `app=result`; nessun Pod corrisponde, quindi la lista degli endpoint è vuota. I Pod sono sani: il traffico arriva al nodo ma, non avendo il Service alcun endpoint, `kube-proxy` rifiuta la connessione (`connection refused`).
 - **Causa confermata:** selector alterato, da `app=result` ad `app=app-sbagliata`.
 
 ### 4. Correzione
@@ -276,7 +276,7 @@ Passare a L3 / team rete o piattaforma se:
 - il problema riguarda più Service contemporaneamente.
 
 Informazioni da allegare al ticket:
-- dump generato da `make evidence LABEL=incident-service`;
+- output di `kubectl describe svc result`, `get endpoints result` e `get pods --show-labels`;
 - ora di inizio e ultima modifica applicata;
 - esito di `make smoke-test` e `make e2e-test`;
 - cosa è già stato provato.
