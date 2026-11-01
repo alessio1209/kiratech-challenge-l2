@@ -276,7 +276,7 @@ Passare a L3 / team rete o piattaforma se:
 - il problema riguarda più Service contemporaneamente.
 
 Informazioni da allegare al ticket:
-- dump generato da `make evidence LABEL=incident-service` (esempio: `docs/evidence/diagnose-incident-service-20261101-151000.txt`);
+- dump generato da `make evidence LABEL=incident-service` (esempio: `docs/evidence/diagnose-incident-service-20261101-150841.txt`);
 - ora di inizio e ultima modifica applicata;
 - esito di `make smoke-test` e `make e2e-test`;
 - cosa è già stato provato.

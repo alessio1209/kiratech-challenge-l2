@@ -225,7 +225,7 @@ make reinstall      # elimina e ricrea il cluster, poi deploy e attesa
 
 ## CI
 
-`.github/workflows/ci.yml` esegue a ogni push e pull request un test di renderizzazione tramite `kustomize build` per verificare che non ci siano errori sintattici nei manifest. La CI **non** crea un cluster: il test e2e è eseguito solo in locale.
+`.github/workflows/ci.yml` esegue a ogni push e pull request un test di renderizzazione tramite `kubectl kustomize` su tutti gli overlay per verificare che non ci siano errori sintattici nei manifest. La CI **non** crea un cluster: il test e2e è eseguito solo in locale.
 
 ## Difficoltà incontrate
 
