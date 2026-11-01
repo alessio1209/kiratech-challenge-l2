@@ -25,10 +25,9 @@ Ho usato un assistente AI (LLM) come supporto per capire gli strumenti, per le i
 
 ## Caso 3 - Errore `CreateContainerConfigError` sull'overlay `custom-options`
 
-- **Problema:** Durante la stesura dell'overlay `custom-options`, il nuovo Pod `vote` è andato in `CreateContainerConfigError`.
-- **Supporto AI:** L'AI ha ipotizzato che Kustomize stesse aggiungendo un hash al nome del ConfigMap (es. `vote-options-66hbtb5hg7`) e che la patch fallisse perché cercava il nome esatto `vote-options`. Mi ha suggerito di aggiungere `disableNameSuffixHash: true` per aggirare il presunto problema.
-- **Verifica:** Non convinto del suggerimento, ho testato Kustomize rimuovendo la direttiva `disableNameSuffixHash: true` dal file YAML. Eseguendo `make change-voting-options`, il pod si è avviato regolarmente, e l'output di `kubectl describe` ha mostrato che Kustomize è intelligente: riscrive automaticamente il riferimento `configMapKeyRef` nel deployment includendo il corretto suffisso alfanumerico (l'hash). 
-- **Esito e Causa Reale:** Ho confermato con un test live-state che l'ipotesi dell'AI (incolpare l'hash) era **errata**. Il vero motivo dell'errore (risolto precedentemente) era la mancanza della direttiva `namespace: voting-app` nel file `kustomization.yaml` dell'overlay: il ConfigMap veniva generato nel namespace di default e risultava semplicemente invisibile al Pod.
+- **Problema:** Durante la stesura dell'overlay `custom-options`, il nuovo Pod `vote` andava in `CreateContainerConfigError`.
+- **Supporto AI:** L'AI ha ipotizzato che il problema fosse l'hash aggiunto da Kustomize al nome del ConfigMap e mi ha suggerito di aggiungere la direttiva `disableNameSuffixHash: true` per aggirarlo.
+- **Verifica e Causa Reale:** Controllando lo stato del cluster, ho scoperto che la vera causa era la mancanza della direttiva `namespace: voting-app` nel `kustomization.yaml` dell'overlay (il ConfigMap veniva generato nel namespace `default` ed era invisibile al Pod). Una volta corretto il namespace, ho testato la configurazione rimuovendo il `disableNameSuffixHash: true` suggerito dall'AI: il deploy ha funzionato. Kustomize risolve i nomi con hash nativamente; l'ipotesi dell'AI era errata.
 
 ## Cosa non ho delegato all'AI
 

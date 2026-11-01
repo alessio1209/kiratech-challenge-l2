@@ -10,7 +10,7 @@ Ambiente locale riproducibile e laboratorio di troubleshooting L2 per la **Docke
 | Documento | Contenuto |
 |---|---|
 | [docs/runbook.md](docs/runbook.md) | Controlli iniziali, comandi diagnostici, due scenari di errore, rollback, escalation |
-| [docs/krateo.md](docs/krateo.md) | Valutazione architetturale di Krateo (Blueprint, Provider, limiti) |
+| [docs/krateo.md](docs/krateo.md) | Valutazione concettuale di Krateo (Blueprint, Provider, limiti) |
 | [docs/ai_usage.md](docs/ai_usage.md) | Uso dell'AI: casi d'uso, verifiche manuali, limiti |
 
 ## Tracciabilità dei deliverable
@@ -97,7 +97,7 @@ Makefile                      automazione (vedere `make help`)
 
 Docker (con daemon avviato), kind, kubectl, make.
 
-Versioni con cui è stato provato: Sistema Operativo: `Debian 12 (Linux)`, Docker: `27.3.1`, kind: `v0.25.0`, kubectl: `v1.31.2` (nodo kind `v1.30.0`, fissato in `kind-config.yaml`). Data dell'ultima prova completa: `Ottobre 2026`.
+Versioni con cui è stato provato: Sistema Operativo: `Debian 12 (Linux)`, Docker: `27.3.1`, kind: `v0.25.0`, kubectl: `v1.31.2` (nodo kind v1.30.0, fissato in kind-config.yaml). Data dell'ultima prova completa: 1 novembre 2026.
 
 ## Installazione
 
@@ -221,6 +221,7 @@ make reinstall      # elimina e ricrea il cluster, poi deploy e attesa
 - **Service senza Endpoint:** se il selector non corrisponde a nessun Pod pronto (scenario 2), il Service non ha Endpoint e `kube-proxy` rifiuta le connessioni (`connection refused`): il sintomo è un errore immediato, non un timeout.
 - **Limiti codice upstream (ConfigMap):** Modificando le opzioni di voto tramite ConfigMap (`make change-voting-options`), l'app `vote` si aggiorna correttamente mostrando "Pizza vs Pasta". Tuttavia, la dashboard `result` continua a mostrare le etichette originali ("Cats vs Dogs") poiché tali stringhe sono hardcodate nativamente nel codice HTML/JS dell'immagine Docker upstream e non sono configurabili dinamicamente.
 - Non è una soluzione production-ready: è un ambiente locale di prova.
+- **Esposizione delle porte:** i NodePort 30000 e 30001 sono pubblicati sull'host su tutte le interfacce (comportamento predefinito di kind). Per limitarli basta aggiungere listenAddress: "127.0.0.1" a ogni extraPortMappings.
 
 ## CI
 

@@ -1,0 +1,211 @@
+### DATA: 2026-11-01 15:08:00 +0100   CONTESTO: kind-voting-cluster   NAMESPACE: voting-app
+
+### DEPLOYMENT E POD
+NAME                     READY   UP-TO-DATE   AVAILABLE   AGE     CONTAINERS   IMAGES                                                 SELECTOR
+deployment.apps/db       1/1     1            1           4m45s   postgres     postgres:15-alpine                                     app=db
+deployment.apps/redis    1/1     1            1           4m45s   redis        redis:alpine                                           app=redis
+deployment.apps/result   1/1     1            1           4m45s   result       dockersamples/examplevotingapp_result                  app=result
+deployment.apps/vote     1/1     1            1           4m45s   vote         dockersamples/examplevotingapp_vote                    app=vote
+deployment.apps/worker   1/1     1            1           4m45s   worker       dockersamples/examplevotingapp_worker:broken-tag-123   app=worker
+
+NAME                          READY   STATUS         RESTARTS   AGE     IP            NODE                           NOMINATED NODE   READINESS GATES
+pod/db-66b94fc5f7-klnl4       1/1     Running        0          4m33s   10.244.0.5    voting-cluster-control-plane   <none>           <none>
+pod/redis-796dc594bb-mvlxj    1/1     Running        0          4m33s   10.244.0.2    voting-cluster-control-plane   <none>           <none>
+pod/result-565df48cf9-swj9h   1/1     Running        0          4m33s   10.244.0.7    voting-cluster-control-plane   <none>           <none>
+pod/vote-7db99fc555-9xf2m     1/1     Running        0          4m33s   10.244.0.8    voting-cluster-control-plane   <none>           <none>
+pod/worker-5dd767667f-cw7tq   1/1     Running        0          4m33s   10.244.0.4    voting-cluster-control-plane   <none>           <none>
+pod/worker-5ddd7999c4-xphqz   0/1     ErrImagePull   0          7s      10.244.0.10   voting-cluster-control-plane   <none>           <none>
+
+### SERVICE (colonna SELECTOR) ED ENDPOINTSLICE
+NAME             TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE     SELECTOR
+service/db       ClusterIP   10.96.215.77    <none>        5432/TCP       4m45s   app=db
+service/redis    ClusterIP   10.96.40.131    <none>        6379/TCP       4m45s   app=redis
+service/result   NodePort    10.96.127.226   <none>        80:30001/TCP   4m45s   app=result
+service/vote     NodePort    10.96.198.245   <none>        80:30000/TCP   4m45s   app=vote
+
+NAME                                          ADDRESSTYPE   PORTS   ENDPOINTS    AGE
+endpointslice.discovery.k8s.io/db-bz6d5       IPv4          5432    10.244.0.5   4m33s
+endpointslice.discovery.k8s.io/redis-m9np4    IPv4          6379    10.244.0.2   4m33s
+endpointslice.discovery.k8s.io/result-2l9hf   IPv4          80      10.244.0.7   4m33s
+endpointslice.discovery.k8s.io/vote-79vtd     IPv4          80      10.244.0.8   4m33s
+
+### LABEL DEI POD (da confrontare con i selector dei Service)
+NAME                      READY   STATUS         RESTARTS   AGE     LABELS
+db-66b94fc5f7-klnl4       1/1     Running        0          4m33s   app=db,pod-template-hash=66b94fc5f7
+redis-796dc594bb-mvlxj    1/1     Running        0          4m33s   app=redis,pod-template-hash=796dc594bb
+result-565df48cf9-swj9h   1/1     Running        0          4m33s   app=result,pod-template-hash=565df48cf9
+vote-7db99fc555-9xf2m     1/1     Running        0          4m33s   app=vote,pod-template-hash=7db99fc555
+worker-5dd767667f-cw7tq   1/1     Running        0          4m33s   app=worker,pod-template-hash=5dd767667f
+worker-5ddd7999c4-xphqz   0/1     ErrImagePull   0          7s      app=worker,pod-template-hash=5ddd7999c4
+
+### EVENTI DI TIPO WARNING
+LAST SEEN   TYPE      REASON             OBJECT                        MESSAGE
+4m33s       Warning   FailedScheduling   pod/db-66b94fc5f7-klnl4       0/1 nodes are available: 1 node(s) had untolerated taint {node.kubernetes.io/not-ready: }. preemption: 0/1 nodes are available: 1 Preemption is not helpful for scheduling.
+4m33s       Warning   FailedScheduling   pod/redis-796dc594bb-mvlxj    0/1 nodes are available: 1 node(s) had untolerated taint {node.kubernetes.io/not-ready: }. preemption: 0/1 nodes are available: 1 Preemption is not helpful for scheduling.
+4m33s       Warning   FailedScheduling   pod/result-565df48cf9-swj9h   0/1 nodes are available: 1 node(s) had untolerated taint {node.kubernetes.io/not-ready: }. preemption: 0/1 nodes are available: 1 Preemption is not helpful for scheduling.
+4m33s       Warning   FailedScheduling   pod/vote-7db99fc555-9xf2m     0/1 nodes are available: 1 node(s) had untolerated taint {node.kubernetes.io/not-ready: }. preemption: 0/1 nodes are available: 1 Preemption is not helpful for scheduling.
+4m33s       Warning   FailedScheduling   pod/worker-5dd767667f-cw7tq   0/1 nodes are available: 1 node(s) had untolerated taint {node.kubernetes.io/not-ready: }. preemption: 0/1 nodes are available: 1 Preemption is not helpful for scheduling.
+5s          Warning   Failed             pod/worker-5ddd7999c4-xphqz   Failed to pull image "dockersamples/examplevotingapp_worker:broken-tag-123": rpc error: code = NotFound desc = failed to pull and unpack image "docker.io/dockersamples/examplevotingapp_worker:broken-tag-123": failed to resolve reference "docker.io/dockersamples/examplevotingapp_worker:broken-tag-123": docker.io/dockersamples/examplevotingapp_worker:broken-tag-123: not found
+5s          Warning   Failed             pod/worker-5ddd7999c4-xphqz   Error: ErrImagePull
+4s          Warning   Failed             pod/worker-5ddd7999c4-xphqz   Error: ImagePullBackOff
+
+### ULTIMI EVENTI (25)
+4m30s       Normal    Pulling             pod/result-565df48cf9-swj9h    Pulling image "dockersamples/examplevotingapp_result"
+4m30s       Normal    Pulling             pod/vote-7db99fc555-9xf2m      Pulling image "dockersamples/examplevotingapp_vote"
+4m15s       Normal    Created             pod/db-66b94fc5f7-klnl4        Created container postgres
+4m15s       Normal    Pulled              pod/db-66b94fc5f7-klnl4        Successfully pulled image "postgres:15-alpine" in 14.656s (14.656s including waiting). Image size: 115263617 bytes.
+4m15s       Normal    Started             pod/db-66b94fc5f7-klnl4        Started container postgres
+4m9s        Normal    Pulled              pod/vote-7db99fc555-9xf2m      Successfully pulled image "dockersamples/examplevotingapp_vote" in 6.169s (20.796s including waiting). Image size: 56948976 bytes.
+4m9s        Normal    Created             pod/vote-7db99fc555-9xf2m      Created container vote
+4m8s        Normal    Started             pod/vote-7db99fc555-9xf2m      Started container vote
+4m4s        Normal    Created             pod/redis-796dc594bb-mvlxj     Created container redis
+4m4s        Normal    Started             pod/redis-796dc594bb-mvlxj     Started container redis
+4m4s        Normal    Pulled              pod/redis-796dc594bb-mvlxj     Successfully pulled image "redis:alpine" in 4.737s (25.53s including waiting). Image size: 39541214 bytes.
+3m56s       Normal    Pulled              pod/worker-5dd767667f-cw7tq    Successfully pulled image "dockersamples/examplevotingapp_worker" in 8.499s (34.009s including waiting). Image size: 80323769 bytes.
+3m56s       Normal    Created             pod/worker-5dd767667f-cw7tq    Created container worker
+3m56s       Normal    Started             pod/worker-5dd767667f-cw7tq    Started container worker
+3m50s       Normal    Created             pod/result-565df48cf9-swj9h    Created container result
+3m50s       Normal    Pulled              pod/result-565df48cf9-swj9h    Successfully pulled image "dockersamples/examplevotingapp_result" in 5.567s (39.541s including waiting). Image size: 77422280 bytes.
+3m49s       Normal    Started             pod/result-565df48cf9-swj9h    Started container result
+8s          Normal    SuccessfulCreate    replicaset/worker-5ddd7999c4   Created pod: worker-5ddd7999c4-xphqz
+8s          Normal    Scheduled           pod/worker-5ddd7999c4-xphqz    Successfully assigned voting-app/worker-5ddd7999c4-xphqz to voting-cluster-control-plane
+8s          Normal    ScalingReplicaSet   deployment/worker              Scaled up replica set worker-5ddd7999c4 to 1
+7s          Normal    Pulling             pod/worker-5ddd7999c4-xphqz    Pulling image "dockersamples/examplevotingapp_worker:broken-tag-123"
+6s          Warning   Failed              pod/worker-5ddd7999c4-xphqz    Error: ErrImagePull
+6s          Warning   Failed              pod/worker-5ddd7999c4-xphqz    Failed to pull image "dockersamples/examplevotingapp_worker:broken-tag-123": rpc error: code = NotFound desc = failed to pull and unpack image "docker.io/dockersamples/examplevotingapp_worker:broken-tag-123": failed to resolve reference "docker.io/dockersamples/examplevotingapp_worker:broken-tag-123": docker.io/dockersamples/examplevotingapp_worker:broken-tag-123: not found
+5s          Warning   Failed              pod/worker-5ddd7999c4-xphqz    Error: ImagePullBackOff
+5s          Normal    BackOff             pod/worker-5ddd7999c4-xphqz    Back-off pulling image "dockersamples/examplevotingapp_worker:broken-tag-123"
+
+### POD NON PRONTI (describe, ultime 25 righe)
+--- worker-5ddd7999c4-xphqz
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       False 
+  ContainersReady             False 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-2vlk4:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type     Reason     Age   From               Message
+  ----     ------     ----  ----               -------
+  Normal   Scheduled  8s    default-scheduler  Successfully assigned voting-app/worker-5ddd7999c4-xphqz to voting-cluster-control-plane
+  Normal   Pulling    7s    kubelet            spec.containers{worker}: Pulling image "dockersamples/examplevotingapp_worker:broken-tag-123"
+  Warning  Failed     6s    kubelet            spec.containers{worker}: Failed to pull image "dockersamples/examplevotingapp_worker:broken-tag-123": rpc error: code = NotFound desc = failed to pull and unpack image "docker.io/dockersamples/examplevotingapp_worker:broken-tag-123": failed to resolve reference "docker.io/dockersamples/examplevotingapp_worker:broken-tag-123": docker.io/dockersamples/examplevotingapp_worker:broken-tag-123: not found
+  Warning  Failed     6s    kubelet            spec.containers{worker}: Error: ErrImagePull
+  Normal   BackOff    5s    kubelet            spec.containers{worker}: Back-off pulling image "dockersamples/examplevotingapp_worker:broken-tag-123"
+  Warning  Failed     5s    kubelet            spec.containers{worker}: Error: ImagePullBackOff
+
+### LOG DI OGNI POD (ultime 30 righe; [previous] = container precedente al riavvio)
+--- pod/db-66b94fc5f7-klnl4
+
+    pg_ctl -D /var/lib/postgresql/data -l logfile start
+
+waiting for server to start....2026-11-01 14:03:47.630 UTC [48] LOG:  starting PostgreSQL 15.19 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+2026-11-01 14:03:47.631 UTC [48] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2026-11-01 14:03:47.633 UTC [51] LOG:  database system was shut down at 2026-11-01 14:03:47 UTC
+2026-11-01 14:03:47.637 UTC [48] LOG:  database system is ready to accept connections
+ done
+server started
+
+/usr/local/bin/docker-entrypoint.sh: ignoring /docker-entrypoint-initdb.d/*
+
+2026-11-01 14:03:47.729 UTC [48] LOG:  received fast shutdown request
+waiting for server to shut down....2026-11-01 14:03:47.730 UTC [48] LOG:  aborting any active transactions
+2026-11-01 14:03:47.732 UTC [48] LOG:  background worker "logical replication launcher" (PID 54) exited with exit code 1
+2026-11-01 14:03:47.735 UTC [49] LOG:  shutting down
+2026-11-01 14:03:47.735 UTC [49] LOG:  checkpoint starting: shutdown immediate
+2026-11-01 14:03:47.738 UTC [49] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.001 s, sync=0.001 s, total=0.004 s; sync files=2, longest=0.001 s, average=0.001 s; distance=0 kB, estimate=0 kB
+2026-11-01 14:03:47.741 UTC [48] LOG:  database system is shut down
+ done
+server stopped
+
+PostgreSQL init process complete; ready for start up.
+
+2026-11-01 14:03:47.849 UTC [1] LOG:  starting PostgreSQL 15.19 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+2026-11-01 14:03:47.849 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+2026-11-01 14:03:47.849 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+2026-11-01 14:03:47.850 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2026-11-01 14:03:47.852 UTC [62] LOG:  database system was shut down at 2026-11-01 14:03:47 UTC
+2026-11-01 14:03:47.856 UTC [1] LOG:  database system is ready to accept connections
+--- pod/redis-796dc594bb-mvlxj
+1:M 01 Nov 2026 14:03:57.552 * <timeseries> 	{ ts-retention-policy    :            0 }
+1:M 01 Nov 2026 14:03:57.552 * <timeseries> 	{ ts-duplicate-policy    :        block }
+1:M 01 Nov 2026 14:03:57.552 * <timeseries> 	{ ts-chunk-size-bytes    :         4096 }
+1:M 01 Nov 2026 14:03:57.552 * <timeseries> 	{ ts-encoding            :   compressed }
+1:M 01 Nov 2026 14:03:57.552 * <timeseries> 	{ ts-ignore-max-time-diff:            0 }
+1:M 01 Nov 2026 14:03:57.552 * <timeseries> 	{ ts-ignore-max-val-diff :     0.000000 }
+1:M 01 Nov 2026 14:03:57.552 * <timeseries> 	{ ts-topology-events     :         true }
+1:M 01 Nov 2026 14:03:57.552 * <timeseries> ]
+1:M 01 Nov 2026 14:03:57.552 * <timeseries> Detected redis oss (cluster-enabled=no)
+1:M 01 Nov 2026 14:03:57.552 * <timeseries> Subscribe to ASM events
+1:M 01 Nov 2026 14:03:57.552 * <timeseries> Subscribe to topology changes events
+1:M 01 Nov 2026 14:03:57.553 * <timeseries> Enabled diskless replication
+1:M 01 Nov 2026 14:03:57.553 * Module 'timeseries' loaded from /usr/local/lib/redis/modules//redistimeseries.so
+1:M 01 Nov 2026 14:03:57.557 * <ReJSON> Created new data type 'ReJSON-RL'
+1:M 01 Nov 2026 14:03:57.558 * <ReJSON> version: 81000 git sha: unknown branch: unknown
+1:M 01 Nov 2026 14:03:57.558 * <ReJSON> Exported RedisJSON_V1 API
+1:M 01 Nov 2026 14:03:57.558 * <ReJSON> Exported RedisJSON_V2 API
+1:M 01 Nov 2026 14:03:57.558 * <ReJSON> Exported RedisJSON_V3 API
+1:M 01 Nov 2026 14:03:57.558 * <ReJSON> Exported RedisJSON_V4 API
+1:M 01 Nov 2026 14:03:57.558 * <ReJSON> Exported RedisJSON_V5 API
+1:M 01 Nov 2026 14:03:57.558 * <ReJSON> Exported RedisJSON_V6 API
+1:M 01 Nov 2026 14:03:57.558 * <ReJSON> Exported RedisJSON_V7 API
+1:M 01 Nov 2026 14:03:57.558 * <ReJSON> Exported RedisJSON_V8 API
+1:M 01 Nov 2026 14:03:57.558 * <ReJSON> Enabled diskless replication
+1:M 01 Nov 2026 14:03:57.558 * <ReJSON> Initialized shared string cache, thread safe: true.
+1:M 01 Nov 2026 14:03:57.558 * Module 'ReJSON' loaded from /usr/local/lib/redis/modules//rejson.so
+1:M 01 Nov 2026 14:03:57.558 * <search> Acquired RedisJSON_V8 API
+1:M 01 Nov 2026 14:03:57.588 * Server initialized
+1:M 01 Nov 2026 14:03:57.589 * Ready to accept connections tcp
+1:M 01 Nov 2026 14:03:57.589 # WARNING: Redis does not require authentication and is not protected by network restrictions. Redis will accept connections from any IP address on any network interface.
+--- pod/result-565df48cf9-swj9h
+Sun, 01 Nov 2026 14:04:14 GMT body-parser deprecated undefined extended: provide extended option at server.js:67:17
+App running on port 80
+Connected to db
+--- pod/vote-7db99fc555-9xf2m
+10.244.0.1 - - [01/Nov/2026:14:06:31 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:06:31 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:06:36 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:06:41 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:06:46 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:06:46 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:06:51 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:06:56 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:07:01 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:07:01 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:07:06 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:07:11 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:07:11 +0000] "GET / HTTP/1.1" 200 1294 "-" "curl/7.88.1"
+10.244.0.1 - - [01/Nov/2026:14:07:16 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:07:16 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:07:21 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+[2026-11-01 14:07:24,619] INFO in app: Received vote for a
+[2026-11-01 14:07:24 +0000] [15] [INFO] Received vote for a
+10.244.0.1 - - [01/Nov/2026:14:07:24 +0000] "POST / HTTP/1.1" 200 1697 "-" "curl/7.88.1"
+10.244.0.1 - - [01/Nov/2026:14:07:26 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:07:31 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:07:31 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:07:36 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:07:41 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:07:46 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:07:46 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:07:51 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:07:56 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:08:01 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:14:08:01 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+--- pod/worker-5dd767667f-cw7tq
+Connected to db
+Found redis at 10.96.40.131
+Connecting to redis
+Processing vote for 'a' by '67f6fcc174cebff'
+--- pod/worker-5ddd7999c4-xphqz
+Error from server (BadRequest): container "worker" in pod "worker-5ddd7999c4-xphqz" is waiting to start: image can't be pulled
