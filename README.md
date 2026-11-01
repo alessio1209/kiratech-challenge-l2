@@ -21,7 +21,7 @@ Ambiente locale riproducibile e laboratorio di troubleshooting L2 per la **Docke
 | README (app, prerequisiti, architettura, installazione, verifica, demo, rimozione) | Questo file |
 | Manifest Kubernetes / Kustomize | `k8s/base`, `k8s/overlays/*` |
 | Runbook L2 | [docs/runbook.md](docs/runbook.md) |
-| Schema architetturale | Sezione [Architettura](#architettura) |
+| Schema architetturale | [docs/architecture.md](docs/architecture.md) |
 | Valutazione Krateo | [docs/krateo.md](docs/krateo.md) |
 | Uso dell'AI | [docs/ai_usage.md](docs/ai_usage.md) |
 | Plus: CI | `.github/workflows/ci.yml` |
