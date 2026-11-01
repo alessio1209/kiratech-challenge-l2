@@ -1,19 +1,22 @@
 CLUSTER_NAME := voting-cluster
 NAMESPACE := voting-app
 KCTX := --context kind-$(CLUSTER_NAME)
+KC := kubectl $(KCTX)
 ENV_FILE := k8s/overlays/local/.env
 DEPLOYMENTS := db redis vote result worker
 APP ?= worker
 
 .PHONY: help doctor init-env env-check cluster-up cluster-down deploy wait-ready verify events logs \
 	smoke-test e2e-test incident-image recover-image incident-service recover-service \
-	change-voting-options reset-voting-options scale-up scale-down reinstall
+	change-voting-options reset-voting-options scale-up scale-down reinstall \
+	diagnose evidence
 
 help:
 	@echo "Setup:      doctor | init-env | cluster-up | deploy | wait-ready | reinstall | cluster-down"
 	@echo "Verifica:   verify | events | logs APP=<nome> | smoke-test | e2e-test"
 	@echo "Incidenti:  incident-image / recover-image | incident-service / recover-service"
 	@echo "Demo:       change-voting-options / reset-voting-options | scale-up / scale-down"
+	@echo "Escalation: diagnose | evidence [LABEL=<nome>]"
 
 doctor:
 	@command -v docker >/dev/null 2>&1 || { echo >&2 "Docker mancante."; exit 1; }
@@ -93,6 +96,34 @@ scale-up:
 scale-down:
 	kubectl $(KCTX) scale deployment vote --replicas=1 -n $(NAMESPACE)
 	kubectl $(KCTX) get pods -n $(NAMESPACE) -l app=vote
+
+# Raccoglie le evidenze da allegare a un'escalation: stato, Service/EndpointSlice, label, eventi,
+# describe dei Pod non pronti, log di ogni Pod. Sola lettura: non modifica nulla nel cluster.
+diagnose:
+	@echo "### DATA: $$(date '+%Y-%m-%d %H:%M:%S %z')   CONTESTO: kind-$(CLUSTER_NAME)   NAMESPACE: $(NAMESPACE)"
+	@echo; echo "### DEPLOYMENT E POD"; $(KC) get deployments,pods -o wide -n $(NAMESPACE)
+	@echo; echo "### SERVICE (colonna SELECTOR) ED ENDPOINTSLICE"; $(KC) get svc,endpointslices -o wide -n $(NAMESPACE)
+	@echo; echo "### LABEL DEI POD (da confrontare con i selector dei Service)"; $(KC) get pods -n $(NAMESPACE) --show-labels
+	@echo; echo "### EVENTI DI TIPO WARNING"; $(KC) get events -n $(NAMESPACE) --field-selector type=Warning --sort-by=.metadata.creationTimestamp
+	@echo; echo "### ULTIMI EVENTI (25)"; $(KC) get events -n $(NAMESPACE) --sort-by=.metadata.creationTimestamp | tail -n 25
+	@echo; echo "### POD NON PRONTI (describe, ultime 25 righe)"; \
+	for p in $$($(KC) get pods -n $(NAMESPACE) --no-headers | awk '{split($$2,a,"/"); if (a[1]!=a[2]) print $$1}'); do \
+		echo "--- $$p"; $(KC) describe pod $$p -n $(NAMESPACE) | tail -n 25; \
+	done
+	@echo; echo "### LOG DI OGNI POD (ultime 30 righe; [previous] = container precedente al riavvio)"; \
+	for p in $$($(KC) get pods -n $(NAMESPACE) -o name); do \
+		echo "--- $$p"; \
+		$(KC) logs $$p -n $(NAMESPACE) --tail=30 2>&1 || true; \
+		$(KC) logs $$p -n $(NAMESPACE) --previous --tail=30 2>/dev/null | sed 's/^/[previous] /' || true; \
+	done
+
+# Salva l'output di diagnose in docs/evidence/ con data e ora.
+# Esempio: make evidence LABEL=incident-image   ->   docs/evidence/diagnose-incident-image-<data>.txt
+LABEL ?=
+evidence:
+	@mkdir -p docs/evidence
+	@f=docs/evidence/diagnose$(if $(LABEL),-$(LABEL))-$$(date +%Y%m%d-%H%M%S).txt; \
+	$(MAKE) --no-print-directory diagnose > $$f 2>&1; echo "Evidenze salvate in $$f"
 
 # Reinstallazione completa da zero.
 reinstall:

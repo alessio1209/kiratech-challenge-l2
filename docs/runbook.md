@@ -15,8 +15,10 @@ kubectl --context kind-voting-cluster get pods,svc,endpoints -n voting-app      
 # 2. Eventi recenti, in ordine temporale
 kubectl --context kind-voting-cluster get events -n voting-app --sort-by=.metadata.creationTimestamp   # make events
 
-# 3. Dettaglio del Pod sospetto (sezione Events in fondo)
+# 3. Dettaglio del Pod sospetto (ricerca tramite l'hash specifico o direttamente per label)
 kubectl --context kind-voting-cluster describe pod <nome-pod> -n voting-app
+# (Opzionale: per fare un'ispezione più rapida senza copiare l'hash)
+kubectl --context kind-voting-cluster describe pod -l app=<nome-app> -n voting-app
 
 # 4. Log del componente
 kubectl --context kind-voting-cluster logs deployment/<nome> -n voting-app --tail=50    # make logs APP=<nome>
@@ -73,6 +75,24 @@ worker-5ddd7999c4-2d6pg   0/1     ImagePullBackOff   0          17s
 Il Pod originale (`worker-5dd767667f-x75jz`) resta `Running`, mentre quello del nuovo ReplicaSet (`worker-5ddd7999c4-2d6pg`) non parte.
 
 ```bash
+kubectl --context kind-voting-cluster describe pod -l app=worker -n voting-app
+```
+
+Evidenza (ispezione fisica dello stato del container incriminato all'interno del pod bloccato):
+```text
+Containers:
+  worker:
+    Container ID:   
+    Image:          dockersamples/examplevotingapp_worker:broken-tag-123
+    Image ID:       
+    Port:           <none>
+    Host Port:      <none>
+    State:          Waiting
+      Reason:       ImagePullBackOff
+    Ready:          False
+```
+
+```bash
 make events
 ```
 
@@ -102,7 +122,7 @@ error: timed out waiting for the condition
 ### 3. Ipotesi e causa confermata
 
 - **Ipotesi:** il nodo non riesce a scaricare l'immagine, per tag inesistente, registry non raggiungibile o credenziali mancanti.
-- **Verifica:** il messaggio `NotFound ... failed to pull and unpack image` indica che il tag richiesto non esiste. Gli altri Pod (che scaricano immagini dallo stesso registry) non hanno problemi, quindi il registry è raggiungibile.
+- **Verifica:** il messaggio `NotFound ... failed to pull and unpack image` e il `describe` mostrano che il tag esatto richiesto (`broken-tag-123`) non esiste. Gli altri Pod (che scaricano immagini dallo stesso registry) non hanno problemi, quindi il registry è raggiungibile.
 - **Causa confermata:** l'immagine del `worker` punta al tag inesistente `broken-tag-123`. Il Pod è stato schedulato correttamente sul nodo, ma il pull dell'immagine fallisce e il container non viene mai avviato.
 
 **Impatto osservato:** grazie al rolling update, Kubernetes mantiene attivo il Pod del vecchio ReplicaSet finché quello nuovo non è pronto. Il servizio non va giù, ma il rilascio resta bloccato e la nuova versione non entra in servizio.
@@ -165,7 +185,7 @@ Passare a L3 / team piattaforma se:
 - il rollout non si completa entro un tempo concordato (ad esempio 10 minuti) nonostante il rollback.
 
 Informazioni da allegare al ticket:
-- output di `kubectl get pods -n voting-app` e `make events` (con gli eventi `Failed to pull image`);
+- output generato da `make evidence LABEL=incident-image` contenente tutti i log fisici;
 - immagine e tag richiesti, e ultimo tag funzionante;
 - ora di inizio dell'anomalia e ultimo deploy eseguito;
 - cosa è già stato provato (recover, rollout undo) e con quale esito.
@@ -219,7 +239,7 @@ Nota: nelle versioni recenti di kubectl `get endpoints` può mostrare un avviso 
 ### 3. Ipotesi e causa confermata
 
 - **Ipotesi:** il Service non seleziona i Pod per una differenza tra il suo `selector` e le label dei Pod.
-- **Verifica:** il selector del Service è `app=app-sbagliata`, il Pod `result` ha `app=result`; nessun Pod corrisponde, quindi la lista degli endpoint è vuota. I Pod sono sani: il traffico arriva al nodo ma viene droppato a livello TCP.
+- **Verifica:** il selector del Service è `app=app-sbagliata`, il Pod `result` ha `app=result`; nessun Pod corrisponde, quindi la lista degli endpoint è vuota. I Pod sono sani: il traffico arriva al nodo ma viene droppato a livello TCP da `kube-proxy`.
 - **Causa confermata:** selector alterato, da `app=result` ad `app=app-sbagliata`.
 
 ### 4. Correzione
@@ -256,7 +276,7 @@ Passare a L3 / team rete o piattaforma se:
 - il problema riguarda più Service contemporaneamente.
 
 Informazioni da allegare al ticket:
-- output di `kubectl describe svc result`, `get endpoints result` e `get pods --show-labels`;
+- dump generato da `make evidence LABEL=incident-service`;
 - ora di inizio e ultima modifica applicata;
 - esito di `make smoke-test` e `make e2e-test`;
 - cosa è già stato provato.

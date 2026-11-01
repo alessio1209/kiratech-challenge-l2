@@ -9,9 +9,9 @@ Ambiente locale riproducibile e laboratorio di troubleshooting L2 per la **Docke
 
 | Documento | Contenuto |
 |---|---|
-| [docs/RUNBOOK.md](docs/RUNBOOK.md) | Controlli iniziali, comandi diagnostici, due scenari di errore, rollback, escalation |
-| [docs/KRATEO.md](docs/KRATEO.md) | Valutazione concettuale di Krateo (template riutilizzabile) |
-| [docs/AI_USAGE.md](docs/AI_USAGE.md) | Uso dell'AI: casi d'uso, verifiche manuali, limiti |
+| [docs/runbook.md](docs/runbook.md) | Controlli iniziali, comandi diagnostici, due scenari di errore, rollback, escalation |
+| [docs/krateo.md](docs/krateo.md) | Valutazione concettuale di Krateo (Blueprint, moduli, limiti) |
+| [docs/ai_usage.md](docs/ai_usage.md) | Uso dell'AI: casi d'uso, verifiche manuali, limiti |
 
 ## Tracciabilità dei deliverable
 
@@ -20,10 +20,10 @@ Ambiente locale riproducibile e laboratorio di troubleshooting L2 per la **Docke
 | Repository con configurazioni, manifest, script | `k8s/`, `Makefile`, `scripts/`, `kind-config.yaml` |
 | README (app, prerequisiti, architettura, installazione, verifica, demo, rimozione) | Questo file |
 | Manifest Kubernetes / Kustomize | `k8s/base`, `k8s/overlays/*` |
-| Runbook L2 | [docs/RUNBOOK.md](docs/RUNBOOK.md) |
+| Runbook L2 | [docs/runbook.md](docs/runbook.md) |
 | Schema architetturale | Sezione [Architettura](#architettura) |
-| Valutazione Krateo | [docs/KRATEO.md](docs/KRATEO.md) |
-| Uso dell'AI | [docs/AI_USAGE.md](docs/AI_USAGE.md) |
+| Valutazione Krateo | [docs/krateo.md](docs/krateo.md) |
+| Uso dell'AI | [docs/ai_usage.md](docs/ai_usage.md) |
 | Plus: CI | `.github/workflows/ci.yml` |
 
 ## Scelta dell'applicazione
@@ -35,6 +35,19 @@ Online Boutique (suggerita dalla challenge) è composta da molti microservizi ed
 - ha già manifest Kubernetes semplici da leggere e adattare.
 
 **Perimetro della demo:** tutti e 5 i componenti dell'app (vote, result, worker, redis, db). Nulla è stato escluso.
+
+### Analisi dei Container e Immagini Utilizzate (Punto 4.2)
+Per garantire stabilità e riproducibilità, le immagini Docker sono state analizzate in base ai loro Dockerfile upstream:
+
+| Componente | Immagine Docker upstream | Linguaggio | Porta Esposta | Variabili d'Ambiente Rilevanti |
+|---|---|---|---|---|
+| **Vote** | `dockersamples/examplevotingapp_vote:latest` | Python | TCP 80 | Nessuna di default (le variabili `OPTION_A` / `OPTION_B` vengono iniettate dinamicamente via ConfigMap nell'overlay `custom-options`) |
+| **Result** | `dockersamples/examplevotingapp_result:latest` | Node.js | TCP 80 | Nessuna (le stringhe "Cats/Dogs" sono hardcodate nell'HTML) |
+| **Worker** | `dockersamples/examplevotingapp_worker:latest` | .NET Core | N/A (nessun Service) | Nessuna |
+| **Redis** | `redis:alpine` | C | TCP 6379 | Nessuna |
+| **DB** | `postgres:15-alpine` | C | TCP 5432 | `POSTGRES_USER`, `POSTGRES_PASSWORD` (Iniettate tramite Secret per evitare di esporle in chiaro nel manifest) |
+
+*(Nota tecnica: tutte le immagini derivanti dal progetto `dockersamples` sono compilate come multi-architettura, garantendo la compatibilità sia su `amd64` che su processori ARM come l'Apple Silicon).*
 
 ## Architettura
 
@@ -63,7 +76,7 @@ Flusso: l'utente vota su `vote`, il voto va in una coda Redis, il `worker` lo le
 | redis | Deployment, `emptyDir` | ClusterIP 6379 | solo interno |
 | db | Deployment, `emptyDir`, Secret | ClusterIP 5432 | solo interno |
 
-Tutto gira nel namespace `voting-app`. Le porte 30000 e 30001 dell'host sono mappate sul nodo kind in `kind-config.yaml`.
+Tutto gira nel namespace `voting-app`. Le porte 30000 e 30001 dell'host sono mappate sul nodo kind in `kind-config.yaml` legandole strettamente all'interfaccia di loopback (`127.0.0.1`) per sicurezza, per evitare che i servizi siano esposti all'intera rete locale.
 
 ## Struttura del repository
 
@@ -181,8 +194,8 @@ kubectl --context kind-voting-cluster get pods -l app=vote -n voting-app
 
 | Scenario | Rottura | Ripristino | Dettagli |
 |---|---|---|---|
-| 1. Immagine inesistente (`worker`) | `make incident-image` | `make recover-image` | [runbook](docs/RUNBOOK.md#scenario-1-fallimento-rilascio-applicativo-immagine-inesistente) |
-| 2. Selector del Service errato (`result`) | `make incident-service` | `make recover-service` | [runbook](docs/RUNBOOK.md#scenario-2-service-non-raggiungibile-selector-errato) |
+| 1. Immagine inesistente (`worker`) | `make incident-image` | `make recover-image` | [runbook](docs/runbook.md#scenario-1-fallimento-rilascio-applicativo-immagine-inesistente) |
+| 2. Selector del Service errato (`result`) | `make incident-service` | `make recover-service` | [runbook](docs/runbook.md#scenario-2-service-non-raggiungibile-selector-errato) |
 
 Durante l'incidente 1 `make wait-ready` fallisce per timeout sul `worker`: è il comportamento voluto, segnala un rollout bloccato.
 
@@ -203,12 +216,13 @@ make reinstall      # elimina e ricrea il cluster, poi deploy e attesa
 - Le immagini upstream usano il tag `latest` (o simili): il comportamento può cambiare nel tempo.
 - Accesso tramite NodePort (nessun ingress), nessun RBAC dedicato, nessuna NetworkPolicy.
 - `make smoke-test` controlla solo che le pagine rispondano; il percorso del voto è verificato rigorosamente da `make e2e-test`.
+- **Service senza Endpoint (Traffico Droppato):** Se un Service perde i suoi Endpoint (come simulato nello scenario 2), in assenza di proxy complessi, il componente `kube-proxy` droppa le richieste TCP rifiutando la connessione in entrata.
 - **Limiti codice upstream (ConfigMap):** Modificando le opzioni di voto tramite ConfigMap (`make change-voting-options`), l'app `vote` si aggiorna correttamente mostrando "Pizza vs Pasta". Tuttavia, la dashboard `result` continua a mostrare le etichette originali ("Cats vs Dogs") poiché tali stringhe sono hardcodate nativamente nel codice HTML/JS dell'immagine Docker upstream e non sono configurabili dinamicamente.
 - Non è una soluzione production-ready: è un ambiente locale di prova.
 
 ## CI
 
-`.github/workflows/ci.yml` esegue a ogni push e pull request: render di base e overlay con `kubectl kustomize`, validazione dello schema Kubernetes 1.30 con kubeconform e controllo statico dello script con shellcheck. La CI **non** crea un cluster: il test completo (`make e2e-test`) è eseguito solo in locale.
+`.github/workflows/ci.yml` esegue a ogni push e pull request: validazione dei manifest tramite `kubectl kustomize` coprendo tutti gli ambienti, inclusi i casi di fault injection per verificare che non vi siano errori sintattici nei YAML. La CI **non** crea un cluster: il test completo (`make e2e-test`) è eseguito solo in locale.
 
 ## Difficoltà incontrate
 

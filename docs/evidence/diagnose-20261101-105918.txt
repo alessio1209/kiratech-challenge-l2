@@ -1,0 +1,164 @@
+### DATA: 2026-11-01 10:59:18 +0100   CONTESTO: kind-voting-cluster   NAMESPACE: voting-app
+
+### DEPLOYMENT E POD
+NAME                     READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS   IMAGES                                  SELECTOR
+deployment.apps/db       1/1     1            1           24h   postgres     postgres:15-alpine                      app=db
+deployment.apps/redis    1/1     1            1           24h   redis        redis:alpine                            app=redis
+deployment.apps/result   1/1     1            1           24h   result       dockersamples/examplevotingapp_result   app=result
+deployment.apps/vote     1/1     1            1           24h   vote         dockersamples/examplevotingapp_vote     app=vote
+deployment.apps/worker   1/1     1            1           24h   worker       dockersamples/examplevotingapp_worker   app=worker
+
+NAME                          READY   STATUS    RESTARTS   AGE   IP            NODE                           NOMINATED NODE   READINESS GATES
+pod/db-66b94fc5f7-whzjw       1/1     Running   0          24h   10.244.0.5    voting-cluster-control-plane   <none>           <none>
+pod/redis-796dc594bb-v74wk    1/1     Running   0          24h   10.244.0.6    voting-cluster-control-plane   <none>           <none>
+pod/result-565df48cf9-5m7gf   1/1     Running   0          24h   10.244.0.7    voting-cluster-control-plane   <none>           <none>
+pod/vote-7db99fc555-btnwf     1/1     Running   0          23h   10.244.0.17   voting-cluster-control-plane   <none>           <none>
+pod/worker-5dd767667f-x75jz   1/1     Running   0          24h   10.244.0.9    voting-cluster-control-plane   <none>           <none>
+
+### SERVICE (colonna SELECTOR) ED ENDPOINTSLICE
+NAME             TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE   SELECTOR
+service/db       ClusterIP   10.96.225.219   <none>        5432/TCP       24h   app=db
+service/redis    ClusterIP   10.96.225.224   <none>        6379/TCP       24h   app=redis
+service/result   NodePort    10.96.120.212   <none>        80:30001/TCP   24h   app=result
+service/vote     NodePort    10.96.155.147   <none>        80:30000/TCP   24h   app=vote
+
+NAME                                          ADDRESSTYPE   PORTS   ENDPOINTS     AGE
+endpointslice.discovery.k8s.io/db-7mlq4       IPv4          5432    10.244.0.5    24h
+endpointslice.discovery.k8s.io/redis-h88jn    IPv4          6379    10.244.0.6    24h
+endpointslice.discovery.k8s.io/result-ldmsc   IPv4          80      10.244.0.7    24h
+endpointslice.discovery.k8s.io/vote-7mkwf     IPv4          80      10.244.0.17   24h
+
+### LABEL DEI POD (da confrontare con i selector dei Service)
+NAME                      READY   STATUS    RESTARTS   AGE   LABELS
+db-66b94fc5f7-whzjw       1/1     Running   0          24h   app=db,pod-template-hash=66b94fc5f7
+redis-796dc594bb-v74wk    1/1     Running   0          24h   app=redis,pod-template-hash=796dc594bb
+result-565df48cf9-5m7gf   1/1     Running   0          24h   app=result,pod-template-hash=565df48cf9
+vote-7db99fc555-btnwf     1/1     Running   0          23h   app=vote,pod-template-hash=7db99fc555
+worker-5dd767667f-x75jz   1/1     Running   0          24h   app=worker,pod-template-hash=5dd767667f
+
+### EVENTI DI TIPO WARNING
+LAST SEEN   TYPE      REASON      OBJECT                        MESSAGE
+14h         Warning   Unhealthy   pod/result-565df48cf9-5m7gf   Readiness probe failed: Get "http://10.244.0.7:80/": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+40m         Warning   Unhealthy   pod/vote-7db99fc555-btnwf     Readiness probe failed: Get "http://10.244.0.17:80/": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+
+### ULTIMI EVENTI (25)
+LAST SEEN   TYPE      REASON      OBJECT                        MESSAGE
+14h         Warning   Unhealthy   pod/result-565df48cf9-5m7gf   Readiness probe failed: Get "http://10.244.0.7:80/": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+40m         Warning   Unhealthy   pod/vote-7db99fc555-btnwf     Readiness probe failed: Get "http://10.244.0.17:80/": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+
+### POD NON PRONTI (describe, ultime 25 righe)
+
+### LOG DI OGNI POD (ultime 30 righe; [previous] = container precedente al riavvio)
+--- pod/db-66b94fc5f7-whzjw
+2026-10-31 10:21:33.776 UTC [60] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.241 s, sync=0.002 s, total=0.261 s; sync files=3, longest=0.002 s, average=0.001 s; distance=0 kB, estimate=358 kB
+2026-10-31 10:22:41.047 UTC [66] ERROR:  duplicate key value violates unique constraint "votes_id_key"
+2026-10-31 10:22:41.047 UTC [66] DETAIL:  Key (id)=(9f33bf1bcfe0d99) already exists.
+2026-10-31 10:22:41.047 UTC [66] STATEMENT:  INSERT INTO votes (id, vote) VALUES ($1, $2)
+2026-10-31 10:22:54.931 UTC [66] ERROR:  duplicate key value violates unique constraint "votes_id_key"
+2026-10-31 10:22:54.931 UTC [66] DETAIL:  Key (id)=(9f33bf1bcfe0d99) already exists.
+2026-10-31 10:22:54.931 UTC [66] STATEMENT:  INSERT INTO votes (id, vote) VALUES ($1, $2)
+2026-10-31 10:23:22.788 UTC [66] ERROR:  duplicate key value violates unique constraint "votes_id_key"
+2026-10-31 10:23:22.788 UTC [66] DETAIL:  Key (id)=(9f33bf1bcfe0d99) already exists.
+2026-10-31 10:23:22.788 UTC [66] STATEMENT:  INSERT INTO votes (id, vote) VALUES ($1, $2)
+2026-10-31 10:24:41.797 UTC [66] ERROR:  duplicate key value violates unique constraint "votes_id_key"
+2026-10-31 10:24:41.797 UTC [66] DETAIL:  Key (id)=(9f33bf1bcfe0d99) already exists.
+2026-10-31 10:24:41.797 UTC [66] STATEMENT:  INSERT INTO votes (id, vote) VALUES ($1, $2)
+2026-10-31 10:26:08.372 UTC [66] ERROR:  duplicate key value violates unique constraint "votes_id_key"
+2026-10-31 10:26:08.372 UTC [66] DETAIL:  Key (id)=(9f33bf1bcfe0d99) already exists.
+2026-10-31 10:26:08.372 UTC [66] STATEMENT:  INSERT INTO votes (id, vote) VALUES ($1, $2)
+2026-10-31 10:26:33.875 UTC [60] LOG:  checkpoint starting: time
+2026-10-31 10:26:33.981 UTC [60] LOG:  checkpoint complete: wrote 2 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.102 s, sync=0.001 s, total=0.107 s; sync files=2, longest=0.001 s, average=0.001 s; distance=1 kB, estimate=323 kB
+2026-10-31 10:26:34.219 UTC [66] ERROR:  duplicate key value violates unique constraint "votes_id_key"
+2026-10-31 10:26:34.219 UTC [66] DETAIL:  Key (id)=(9f33bf1bcfe0d99) already exists.
+2026-10-31 10:26:34.219 UTC [66] STATEMENT:  INSERT INTO votes (id, vote) VALUES ($1, $2)
+2026-10-31 10:31:34.079 UTC [60] LOG:  checkpoint starting: time
+2026-10-31 10:31:34.185 UTC [60] LOG:  checkpoint complete: wrote 2 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.102 s, sync=0.001 s, total=0.106 s; sync files=2, longest=0.001 s, average=0.001 s; distance=1 kB, estimate=290 kB
+2026-10-31 13:36:37.780 UTC [60] LOG:  checkpoint starting: time
+2026-10-31 13:36:38.072 UTC [60] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.277 s, sync=0.002 s, total=0.294 s; sync files=3, longest=0.002 s, average=0.001 s; distance=1 kB, estimate=262 kB
+2026-10-31 13:54:44.575 UTC [66] ERROR:  duplicate key value violates unique constraint "votes_id_key"
+2026-10-31 13:54:44.575 UTC [66] DETAIL:  Key (id)=(9f33bf1bcfe0d99) already exists.
+2026-10-31 13:54:44.575 UTC [66] STATEMENT:  INSERT INTO votes (id, vote) VALUES ($1, $2)
+2026-10-31 13:56:37.469 UTC [60] LOG:  checkpoint starting: time
+2026-10-31 13:56:37.619 UTC [60] LOG:  checkpoint complete: wrote 2 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.139 s, sync=0.001 s, total=0.151 s; sync files=2, longest=0.001 s, average=0.001 s; distance=1 kB, estimate=235 kB
+--- pod/redis-796dc594bb-v74wk
+1:M 31 Oct 2026 09:56:24.285 * <ReJSON> Initialized shared string cache, thread safe: true.
+1:M 31 Oct 2026 09:56:24.285 * Module 'ReJSON' loaded from /usr/local/lib/redis/modules//rejson.so
+1:M 31 Oct 2026 09:56:24.285 * <search> Acquired RedisJSON_V8 API
+1:M 31 Oct 2026 09:56:24.302 * Server initialized
+1:M 31 Oct 2026 09:56:24.302 * Ready to accept connections tcp
+1:M 31 Oct 2026 09:56:24.302 # WARNING: Redis does not require authentication and is not protected by network restrictions. Redis will accept connections from any IP address on any network interface.
+1:M 31 Oct 2026 11:14:59.302 * 1 changes in 3600 seconds. Saving...
+1:M 31 Oct 2026 11:14:59.311 * Background saving started by pid 37
+37:C 31 Oct 2026 11:14:59.346 * BGSAVE done, 0 keys saved, 0 keys skipped, 89 bytes written.
+37:C 31 Oct 2026 11:14:59.353 * DB saved on disk
+37:C 31 Oct 2026 11:14:59.360 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+1:M 31 Oct 2026 11:14:59.429 * Background saving terminated with success
+1:M 31 Oct 2026 13:31:51.011 * 1 changes in 3600 seconds. Saving...
+1:M 31 Oct 2026 13:31:51.020 * Background saving started by pid 38
+38:C 31 Oct 2026 13:31:51.035 * BGSAVE done, 1 keys saved, 0 keys skipped, 157 bytes written.
+38:C 31 Oct 2026 13:31:51.038 * DB saved on disk
+38:C 31 Oct 2026 13:31:51.039 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+1:M 31 Oct 2026 13:31:51.122 * Background saving terminated with success
+1:M 31 Oct 2026 16:14:18.693 * 1 changes in 3600 seconds. Saving...
+1:M 31 Oct 2026 16:14:18.708 * Background saving started by pid 39
+39:C 31 Oct 2026 16:14:18.727 * BGSAVE done, 0 keys saved, 0 keys skipped, 89 bytes written.
+39:C 31 Oct 2026 16:14:18.731 * DB saved on disk
+39:C 31 Oct 2026 16:14:18.733 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+1:M 31 Oct 2026 16:14:18.810 * Background saving terminated with success
+1:M 01 Nov 2026 09:58:06.034 * 1 changes in 3600 seconds. Saving...
+1:M 01 Nov 2026 09:58:06.045 * Background saving started by pid 40
+40:C 01 Nov 2026 09:58:06.080 * BGSAVE done, 0 keys saved, 0 keys skipped, 89 bytes written.
+40:C 01 Nov 2026 09:58:06.084 * DB saved on disk
+40:C 01 Nov 2026 09:58:06.086 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+1:M 01 Nov 2026 09:58:06.147 * Background saving terminated with success
+--- pod/result-565df48cf9-5m7gf
+Sat, 31 Oct 2026 09:56:50 GMT body-parser deprecated undefined extended: provide extended option at server.js:67:17
+App running on port 80
+Connected to db
+--- pod/vote-7db99fc555-btnwf
+10.244.0.1 - - [01/Nov/2026:09:57:40 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:57:45 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:57:50 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:57:55 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:57:55 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:57:57 +0000] "GET / HTTP/1.1" 200 1294 "-" "curl/7.88.1"
+10.244.0.1 - - [01/Nov/2026:09:58:00 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:58:05 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+[2026-11-01 09:58:05,268] INFO in app: Received vote for a
+[2026-11-01 09:58:05 +0000] [16] [INFO] Received vote for a
+10.244.0.1 - - [01/Nov/2026:09:58:05 +0000] "POST / HTTP/1.1" 200 1697 "-" "curl/7.88.1"
+10.244.0.1 - - [01/Nov/2026:09:58:10 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:58:10 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:58:15 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:58:20 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:58:25 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:58:25 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:58:30 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:58:35 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:58:40 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:58:40 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:58:45 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:58:50 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:58:55 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:58:55 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:59:00 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:59:05 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:59:10 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:59:10 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+10.244.0.1 - - [01/Nov/2026:09:59:15 +0000] "GET / HTTP/1.1" 200 1294 "-" "kube-probe/1.30"
+--- pod/worker-5dd767667f-x75jz
+Connected to db
+Connecting to redis
+Found redis at 10.96.225.224
+Processing vote for 'b' by '9f33bf1bcfe0d99'
+Processing vote for 'b' by '9f33bf1bcfe0d99'
+Processing vote for 'a' by 'd70386ea2edc3c5'
+Processing vote for 'b' by '9f33bf1bcfe0d99'
+Processing vote for 'b' by '9f33bf1bcfe0d99'
+Processing vote for 'b' by '9f33bf1bcfe0d99'
+Processing vote for 'b' by '9f33bf1bcfe0d99'
+Processing vote for 'b' by '9f33bf1bcfe0d99'
+Processing vote for 'b' by '9f33bf1bcfe0d99'
+Processing vote for 'a' by '4e1160b5e52fc28'
+Processing vote for 'b' by '9f33bf1bcfe0d99'
+Processing vote for 'a' by '5bf2b213591f934'

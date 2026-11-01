@@ -1,4 +1,4 @@
-name: CI - Kustomize Validation
+name: CI
 
 on:
   push:
@@ -7,26 +7,24 @@ on:
     branches: [ "main" ]
 
 jobs:
-  validate-manifests:
+  validate-kustomize:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout del codice
         uses: actions/checkout@v4
 
-      - name: Installa Kustomize
-        run: |
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-          sudo mv kustomize /usr/local/bin/
+      - name: Setup del file .env per la CI
+        # Copia il file di esempio in .env in modo che Kustomize non vada in errore
+        run: cp k8s/overlays/local/.env.example k8s/overlays/local/.env
 
-      - name: Valida Base (Upstream)
-        run: kustomize build k8s/base > /dev/null
+      - name: Test build Overlay Local
+        run: kubectl kustomize k8s/overlays/local > /dev/null
 
-      - name: Valida Overlay Locale
-        run: |
-          cp k8s/overlays/local/.env.example k8s/overlays/local/.env
-          kustomize build k8s/overlays/local > /dev/null
+      - name: Test build Overlay Incident-Image
+        run: kubectl kustomize k8s/overlays/incident-image > /dev/null
 
-      - name: Valida Overlay Incidenti
-        run: |
-          kustomize build k8s/overlays/incident-image > /dev/null
-          kustomize build k8s/overlays/incident-service > /dev/null
+      - name: Test build Overlay Incident-Service
+        run: kubectl kustomize k8s/overlays/incident-service > /dev/null
+
+      - name: Test build Overlay Custom-Options
+        run: kubectl kustomize k8s/overlays/custom-options > /dev/null
